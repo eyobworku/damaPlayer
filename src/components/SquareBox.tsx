@@ -2,33 +2,28 @@ import { Box, Button, Image } from "@chakra-ui/react";
 import cocka from "../assets/coca-cola-png-41660.png";
 import fanta from "../assets/Fanta.webp";
 import { useEffect, useState } from "react";
+import { Korki } from "../hooks/useKorki";
+import blClown from "../assets/black_crown.png";
 
 interface Props {
-  onSelectSquare: (customKey: string) => void;
-  typeOfBox: number;
-  customKey: string;
-  selected: boolean;
+  onSelectSquare: (selKorki: Korki) => void;
+  korki: Korki | null;
 }
 
-const SquareBox = ({
-  onSelectSquare,
-  typeOfBox,
-  customKey,
-  selected,
-}: Props) => {
+const SquareBox = ({ onSelectSquare, korki }: Props) => {
   const [imageSrc, setImageSrc] = useState(
-    typeOfBox === 1 ? fanta : typeOfBox === 2 ? cocka : ""
+    korki?.type === 1 ? fanta : korki?.type === 2 ? cocka : ""
   );
 
   useEffect(() => {
-    setImageSrc(typeOfBox === 1 ? fanta : typeOfBox === 2 ? cocka : "");
-  }, [typeOfBox, fanta, cocka]);
+    setImageSrc(korki?.type === 1 ? fanta : korki?.type === 2 ? cocka : "");
+  }, [korki?.type, fanta, cocka]);
   return (
     <>
       <Box
         position="relative"
         display="inline-block"
-        bg={typeOfBox === 0 ? "black" : "blue.200"}
+        bg={korki === null ? "black" : "blue.200"}
       >
         <Box
           borderRadius="40px"
@@ -37,15 +32,30 @@ const SquareBox = ({
           width="75px"
           position="relative"
         >
-          {typeOfBox !== 0 && (
+          {korki !== null && (
             <>
               {imageSrc && (
                 <Image
                   src={imageSrc}
                   borderRadius="40px"
-                  border={selected ? "4px solid red" : "none"}
+                  border={korki.selected === 1 ? "4px solid red" : "none"}
                   height="100%"
                   width="100%"
+                  objectFit="cover"
+                  zIndex="0"
+                />
+              )}
+              {korki.nigus && (
+                <Image
+                  src={blClown}
+                  borderRadius="50%"
+                  position="absolute"
+                  top="50%"
+                  left="50%"
+                  transform="translate(-50%, -50%)"
+                  width="55px" // Adjust crown size here
+                  height="auto" // Maintain aspect ratio
+                  zIndex="1"
                 />
               )}
 
@@ -60,8 +70,9 @@ const SquareBox = ({
                 left={0}
                 right={0}
                 bottom={0}
+                zIndex="2"
                 onClick={() => {
-                  onSelectSquare(customKey);
+                  onSelectSquare(korki);
                 }}
               />
             </>
@@ -73,18 +84,3 @@ const SquareBox = ({
 };
 
 export default SquareBox;
-
-// <Box
-//   display="flex"
-//   justifyContent="center"
-//   bg={typeOfBox === 1 ? "black" : "blue.200"}
-//   h="85px"
-//   w="85px"
-//   alignItems="center"
-// >
-//   {typeOfBox !== 1 && (
-//     <Button variant="unstyled" p={0} m={0} border="none" bg="transparent">
-//       <Image src={fanta} borderRadius="40px" h="75px" w="75px" />
-//     </Button>
-//   )}
-// </Box>

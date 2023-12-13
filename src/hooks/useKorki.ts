@@ -4,7 +4,10 @@ export interface Korki{
     play:boolean;
     type:number;
     customKey:string;
-}
+    selected:number;
+    nigus:boolean;
+} //selected type (firit selected/ currently playing /still moving /efta ) / player type 
+//efta does they other korki / does the oppertunity was there
 
 const useKorki = () => {
     const intialKorki: Korki[]=[];
@@ -12,10 +15,9 @@ const useKorki = () => {
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
             const key = `${i}${j}`;
-            if(i <3 || i >4){
             if((i + j) % 2 === 0){
-                intialKorki.push({id:id++,customKey:key,play:true,type:(i < 3) ? 1:(i > 4) ? 2:3})
-            }}
+                intialKorki.push({id:id++,customKey:key,play:false,type:(i < 3) ? 1:(i > 4) ? 2:3,selected:0,nigus:false})
+            }
         }
     }
     

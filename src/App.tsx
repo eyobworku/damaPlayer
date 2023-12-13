@@ -7,15 +7,18 @@ function App() {
     <>
       <Grid
         templateAreas={`'nav'
-                      'main'`}
+                        'main side'`}
         gridTemplateRows={"50px 1fr"}
+        gridTemplateColumns={"auth 80px"}
       >
-        <GridItem area={"nav"}>
+        <GridItem area={"nav"} gridRow="1" gridColumn="1 / span 2">
           <NavBar />
         </GridItem>
-        <GridItem area={"main"}>
-          {/* <Board /> */}
+        <GridItem area={"main"} gridColumn="1">
           <Board />
+        </GridItem>
+        <GridItem bg="gray" area={"side"} gridColumn="2">
+          side
         </GridItem>
       </Grid>
     </>
