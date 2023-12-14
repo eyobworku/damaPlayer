@@ -1,8 +1,11 @@
 import { Grid, GridItem } from "@chakra-ui/react";
 import Board from "./components/Board";
 import NavBar from "./components/NavBar";
+import SideBar from "./components/SideBar";
+import { useState } from "react";
 
 function App() {
+  const [eftaState, setEftaState] = useState(false);
   return (
     <>
       <Grid
@@ -15,10 +18,16 @@ function App() {
           <NavBar />
         </GridItem>
         <GridItem area={"main"} gridColumn="1">
-          <Board />
+          <Board
+            checkEftaVar={eftaState}
+            offSelectEfta={() => setEftaState(false)}
+          />
         </GridItem>
         <GridItem bg="gray" area={"side"} gridColumn="2">
-          side
+          <SideBar
+            eftaState={eftaState}
+            onSelectEfta={() => setEftaState(!eftaState)}
+          />
         </GridItem>
       </Grid>
     </>

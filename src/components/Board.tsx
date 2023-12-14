@@ -1,7 +1,7 @@
 import { Box, Center, Flex } from "@chakra-ui/react";
 import SquareBox from "./SquareBox";
 import useBoard, { SquareBoard } from "../hooks/useBoard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useKorki, { Korki } from "../hooks/useKorki";
 
 export interface GameBoard {
@@ -12,16 +12,34 @@ interface ExtendedKorki extends Korki {
   x: number;
   y: number;
 }
+interface Efta {
+  prevKorkiState: Korki[];
+  doesEat: boolean;
+}
 //type 1 fanta down / 2 coka up
 // for(let i=0;i<8;i++){ let row = []
 //   for(let j=0;j<8;j++){ row.push(`${i}${j}`)}console.log(row)}
 
 const initialKorki: Korki[] = useKorki();
 const initialSquares: SquareBoard[][] = useBoard();
+interface Props {
+  checkEftaVar: boolean;
+  offSelectEfta: () => void;
+}
 
-const Board = () => {
+const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
   const [korkiState, setKorkiState] = useState<Korki[]>(initialKorki);
   const [firstSelected, setFirstSelected] = useState<Korki | null>(null);
+  const [eftaState, setEftaState] = useState<Efta>({
+    prevKorkiState: korkiState,
+    doesEat: false,
+  });
+  useEffect(() => {
+    setEftaState({ ...eftaState, prevKorkiState: korkiState });
+  }, [korkiState]);
+  useEffect(() => {
+    console.log(eftaState.doesEat);
+  }, [eftaState.prevKorkiState]);
 
   const updateSquare = (korki: Korki) => {
     if (firstSelected === null && korki.type === 3) {
@@ -54,26 +72,64 @@ const Board = () => {
         x: parseInt(korki.customKey.charAt(0)),
         y: parseInt(korki.customKey.charAt(1)),
       };
-
-      const { movable, eat, nigus } = checkEatable(firstType, newType);
-
-      if (movable) {
-        setKorkiState(
-          korkiState.map((k) => {
-            if (k.id === korki.id) {
-              return { ...k, type: firstType.type, nigus: nigus }; // Update the type of the clicked Korki to firstSelected's type
-            } else if (k.id === firstSelected.id) {
-              return { ...k, type: newType.type, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
-            } else if (k.id === eat) {
-              return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
-            }
-            return k;
-          })
+      let varMovable = false;
+      let eatEfta = false;
+      let varEat = -1;
+      let varNigus = false;
+      if (!eftaState.doesEat && checkEftaVar) {
+        const { movable, nigus } = checkEatable(
+          firstType,
+          newType,
+          eftaState.prevKorkiState
         );
+        varMovable = movable;
+        eatEfta = true;
+        varNigus = nigus;
+
+        offSelectEfta();
+      } else {
+        const { movable, eat, nigus } = checkEatable(
+          firstType,
+          newType,
+          korkiState
+        );
+        varMovable = movable;
+        varEat = eat;
+        varNigus = nigus;
+      }
+
+      if (varMovable) {
+        if (!eatEfta) {
+          // console.log("eatefta ", eatEfta);
+
+          setKorkiState(
+            korkiState.map((k) => {
+              if (k.id === korki.id) {
+                return { ...k, type: firstType.type, nigus: varNigus }; // Update the type of the clicked Korki to firstSelected's type
+              } else if (k.id === firstSelected.id) {
+                return { ...k, type: newType.type, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
+              } else if (k.id === varEat) {
+                return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
+              }
+              return k;
+            })
+          );
+        } else {
+          setKorkiState(
+            korkiState.map((k) => {
+              if (k.id === firstSelected.id) {
+                return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
+              }
+              return k;
+            })
+          );
+        }
+        setEftaState({ ...eftaState, doesEat: varEat !== -1 ? true : false });
         setFirstSelected(null);
       }
     }
   };
+  // const updateKorkiState = (firstSelected:Korki,korki:Korki,korkiState:Korki[])=>{}
 
   const getDisDir = (firstType: ExtendedKorki, newType: ExtendedKorki) => {
     let dis = 0;
@@ -88,7 +144,11 @@ const Board = () => {
     return { dir, dis };
   };
 
-  const checkEatable = (firstType: ExtendedKorki, newType: ExtendedKorki) => {
+  const checkEatable = (
+    firstType: ExtendedKorki,
+    newType: ExtendedKorki,
+    korkiState: Korki[]
+  ) => {
     let movable = false;
     let backWard = false;
     let nigus = false;
@@ -102,10 +162,10 @@ const Board = () => {
       0,
       dis
     );
-    console.log(diagId);
+    // console.log(diagId);
     // nigus moves
     if (firstType.nigus) {
-      return findOtherTypeKorkiId(diagId, firstType.type);
+      return findOtherTypeKorkiId(diagId, firstType.type, korkiState);
     }
 
     //Backward
@@ -152,11 +212,15 @@ const Board = () => {
       (firstType.type === 1 && newType.x === 7) ||
       (firstType.type === 2 && newType.x === 0)
         ? true
-        : false; // firstType.nigus === true ? true
+        : false; // firstType.nigus === true ? true :
     return { movable, eat, nigus };
   };
 
-  const findOtherTypeKorkiId = (diagId: number[], myType: number) => {
+  const findOtherTypeKorkiId = (
+    diagId: number[],
+    myType: number,
+    korkiState: Korki[]
+  ) => {
     let eat = -1;
     let typeTwoCount = 0;
     let movable = true;
@@ -218,22 +282,6 @@ const Board = () => {
     return -1; // Return undefined for invalid row or column or if the condition doesn't match
   };
 
-  // const changeFirstSelected = (korki: Korki | null) => {
-  //   if (korki === null) {
-  //     setKorkiState(
-  //       korkiState.map((k) =>
-  //         k.id === firstSelected?.id ? { ...k, selected: 0 } : k
-  //       )
-  //     );
-  //     setFirstSelected(null);
-  //   } else {
-  //     setFirstSelected(korki);
-  //     setKorkiState(
-  //       korkiState.map((k) => (k.id === korki.id ? { ...k, selected: 1 } : k))
-  //     );
-  //   }
-  // };
-
   const renderBoard = () => {
     const rows: JSX.Element[] = [];
     let id = 0;
@@ -258,9 +306,6 @@ const Board = () => {
 
     return rows;
   };
-  // useEffect(() => {
-  //   console.log(korkiState);
-  // }, [korkiState]);
 
   return (
     <Box p={5}>
