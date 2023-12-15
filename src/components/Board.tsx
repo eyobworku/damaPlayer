@@ -34,18 +34,22 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
     prevKorkiState: korkiState,
     doesEat: false,
   });
+  const [currentPlayer, setCurrentPlayer] = useState(2); //true = player 1
+
   useEffect(() => {
     setEftaState({ ...eftaState, prevKorkiState: korkiState });
   }, [korkiState]);
-  useEffect(() => {
-    console.log(eftaState.doesEat);
-  }, [eftaState.prevKorkiState]);
 
   const updateSquare = (korki: Korki) => {
     if (firstSelected === null && korki.type === 3) {
       return;
     }
+
     if (firstSelected === null) {
+      //check currebt player order
+      if (korki.type === currentPlayer && !checkEftaVar) {
+        return;
+      }
       setKorkiState(
         korkiState.map((k) =>
           k.customKey === korki.customKey ? { ...k, selected: 1 } : k
@@ -53,12 +57,11 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       );
       setFirstSelected(korki);
     } else if (firstSelected.customKey === korki.customKey) {
-      setKorkiState((prevKorkiState) =>
-        prevKorkiState.map((k) =>
+      setKorkiState(
+        korkiState.map((k) =>
           k.customKey === firstSelected.customKey ? { ...k, selected: 0 } : k
         )
       );
-
       setFirstSelected(null);
     } else {
       //main logic
@@ -76,18 +79,50 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       let eatEfta = false;
       let varEat = -1;
       let varNigus = false;
+      let secondMove = false;
+      //check ongoing movement
+      if (firstType.selected === 2) {
+        const { movable, eat, nigus } = checkEatable(
+          firstType,
+          newType,
+          korkiState
+        );
+        // console.log(firstType.customKey, newType.customKey);
+        console.log(movable, eat, nigus);
+        if (eat !== -1) {
+          varMovable = movable;
+          varEat = eat;
+          varNigus = nigus;
+        } else {
+          setKorkiState(
+            korkiState.map((k) =>
+              k.id === firstType.id ? { ...k, selected: 0 } : k
+            )
+          );
+          setFirstSelected(null);
+        }
+        secondMove = true;
+      }
+
+      //efta eating
       if (!eftaState.doesEat && checkEftaVar) {
-        const { movable, nigus } = checkEatable(
+        console.log("check...");
+        const { movable, eat, nigus } = checkEatable(
           firstType,
           newType,
           eftaState.prevKorkiState
         );
-        varMovable = movable;
-        eatEfta = true;
-        varNigus = nigus;
+        if (eat !== -1) {
+          eatEfta = true;
+          varMovable = movable;
+          varNigus = nigus;
+        } else {
+          varMovable = false;
+        }
 
         offSelectEfta();
-      } else {
+      } else if (!checkEftaVar && !secondMove) {
+        //normal move checkpoint
         const { movable, eat, nigus } = checkEatable(
           firstType,
           newType,
@@ -100,31 +135,58 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
 
       if (varMovable) {
         if (!eatEfta) {
-          // console.log("eatefta ", eatEfta);
-
           setKorkiState(
             korkiState.map((k) => {
               if (k.id === korki.id) {
-                return { ...k, type: firstType.type, nigus: varNigus }; // Update the type of the clicked Korki to firstSelected's type
+                return {
+                  ...k,
+                  type: firstType.type,
+                  nigus: varNigus,
+                  selected: varEat === -1 ? 0 : 2,
+                }; // Update the type of the clicked Korki to firstSelected's type
               } else if (k.id === firstSelected.id) {
-                return { ...k, type: newType.type, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
+                return {
+                  ...k,
+                  type: newType.type,
+                  selected: 0,
+                  nigus: false,
+                }; // Update the type of the firstSelected Korki to clicked Korki's type
               } else if (k.id === varEat) {
                 return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
               }
               return k;
             })
           );
-        } else {
+          setCurrentPlayer(firstType.type);
+          if (varEat === -1) {
+            setFirstSelected(null);
+          } else {
+            //set firset selected to new type
+            setFirstSelected({
+              ...korkiState[korki.id],
+              type: firstType.type,
+              nigus: varNigus,
+              selected: 2,
+            });
+          }
+        } else if (eatEfta) {
           setKorkiState(
             korkiState.map((k) => {
               if (k.id === firstSelected.id) {
-                return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
+                return { ...k, type: 3, selected: 0, nigus: false }; // eat the efta
               }
               return k;
             })
           );
+          setFirstSelected(null);
         }
         setEftaState({ ...eftaState, doesEat: varEat !== -1 ? true : false });
+      } else {
+        setKorkiState(
+          korkiState.map((k) =>
+            k.customKey === firstSelected.customKey ? { ...k, selected: 0 } : k
+          )
+        );
         setFirstSelected(null);
       }
     }
@@ -153,6 +215,7 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
     let backWard = false;
     let nigus = false;
     let eat = -1;
+
     const { dir, dis } = getDisDir(firstType, newType);
     if (dir === "none" || newType.type !== 3) {
       return { movable, eat, nigus };
@@ -174,20 +237,20 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       backWard = true;
       if (diagId.length === 2) {
         eat =
-          korkiState[diagId[0]].type !== 2 && korkiState[diagId[1]].type === 3
+          korkiState[diagId[0]].type === 1 && korkiState[diagId[1]].type === 3
             ? diagId[0]
             : -1;
-        movable = true;
+        movable = eat === -1 ? false : true;
       }
     } else if (firstType.type === 1 && dir.startsWith("up")) {
       // console.log("Up Back");
       backWard = true;
       if (diagId.length === 2) {
         eat =
-          korkiState[diagId[0]].type !== 1 && korkiState[diagId[1]].type === 3
+          korkiState[diagId[0]].type === 2 && korkiState[diagId[1]].type === 3
             ? diagId[0]
             : -1;
-        movable = true;
+        movable = eat === -1 ? false : true;
       }
     }
 
@@ -204,7 +267,7 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
         movable = false;
       }
     } else if (diagId.length === 1 && !backWard) {
-      movable = korkiState[diagId[0]].type === 3;
+      movable = korkiState[diagId[0]].type === 3 && firstType.selected !== 2;
     }
 
     //check if it can be nigus
@@ -216,6 +279,7 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
     return { movable, eat, nigus };
   };
 
+  //nigus move check
   const findOtherTypeKorkiId = (
     diagId: number[],
     myType: number,
@@ -292,9 +356,7 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
         rowElements.push(
           <SquareBox
             key={key}
-            korki={
-              initialSquares[i][j].typeOfBoard !== 0 ? korkiState[id++] : null
-            }
+            korki={initialSquares[i][j].typeOfBoard ? korkiState[id++] : null}
             onSelectSquare={(korki) => {
               updateSquare(korki);
             }}

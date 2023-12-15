@@ -1,7 +1,7 @@
 import { Korki } from "./useKorki";
 
 export interface SquareBoard {
-    typeOfBoard: number;
+    typeOfBoard: boolean;
     korki: Korki | null;
 }
 const useBoard = () => {
@@ -10,9 +10,9 @@ const useBoard = () => {
         let row: SquareBoard[] = [];
         for (let j = 0; j < 8; j++) {
             if((i + j) % 2 === 0){
-                row.push({ typeOfBoard:3, korki:null});
+                row.push({ typeOfBoard:true, korki:null});
             }else{
-                row.push({ typeOfBoard:0, korki:null});
+                row.push({ typeOfBoard:false, korki:null});
             }
         }
         initialSquares.push(row);

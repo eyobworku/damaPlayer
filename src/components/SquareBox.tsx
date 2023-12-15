@@ -1,4 +1,4 @@
-import { Box, Button, Image } from "@chakra-ui/react";
+import { Box, Image } from "@chakra-ui/react";
 import cocka from "../assets/coca-cola-png-41660.png";
 import fanta from "../assets/Fanta.webp";
 import { useEffect, useState } from "react";
@@ -22,7 +22,7 @@ const SquareBox = ({ onSelectSquare, korki }: Props) => {
     <Box
       position="relative"
       display="inline-block"
-      bg={korki === null ? "black" : "blue.200"}
+      bg={korki ? "blue.200" : "black"}
       // borderRadius="40px"
       overflow="hidden"
       height="75px"
@@ -41,7 +41,13 @@ const SquareBox = ({ onSelectSquare, korki }: Props) => {
             <Image
               src={imageSrc}
               borderRadius="40px"
-              border={korki.selected === 1 ? "4px solid red" : "none"}
+              border={
+                korki.selected === 1
+                  ? "4px solid red"
+                  : korki.selected === 2
+                  ? "4px solid white"
+                  : "none"
+              }
               height="100%"
               width="100%"
               objectFit="cover"

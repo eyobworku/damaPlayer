@@ -11,8 +11,8 @@ function App() {
       <Grid
         templateAreas={`'nav'
                         'main side'`}
-        gridTemplateRows={"50px 1fr"}
-        gridTemplateColumns={"auth 80px"}
+        gridTemplateRows={"50px auth"}
+        gridTemplateColumns={"auth 60px"}
       >
         <GridItem area={"nav"} gridRow="1" gridColumn="1 / span 2">
           <NavBar />
@@ -23,7 +23,7 @@ function App() {
             offSelectEfta={() => setEftaState(false)}
           />
         </GridItem>
-        <GridItem bg="gray" area={"side"} gridColumn="2">
+        <GridItem marginY={3} bg="gray" area={"side"} gridColumn="2">
           <SideBar
             eftaState={eftaState}
             onSelectEfta={() => setEftaState(!eftaState)}

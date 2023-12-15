@@ -5,16 +5,18 @@ interface Props {
 }
 const SideBar = ({ eftaState, onSelectEfta }: Props) => {
   return (
-    <HStack justifyContent="center" marginY={5}>
-      <Button
-        colorScheme="blue"
-        onClick={() => {
-          onSelectEfta();
-        }}
-      >
-        Efita {eftaState ? "true" : "false"}
-      </Button>
-    </HStack>
+    <>
+      <HStack justifyContent="center" marginY={5}>
+        <Button colorScheme={eftaState ? "red" : "blue"} onClick={onSelectEfta}>
+          Efita
+        </Button>
+      </HStack>
+      {/* <HStack justifyContent="center">
+        <Button colorScheme="blue" onClick={() => {}}>
+          Finish moving
+        </Button>
+      </HStack> */}
+    </>
   );
 };
 
