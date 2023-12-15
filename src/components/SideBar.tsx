@@ -1,9 +1,10 @@
-import { Button, HStack } from "@chakra-ui/react";
+import { Button, HStack, Text } from "@chakra-ui/react";
 interface Props {
   eftaState: boolean;
+  currentPlayer: number;
   onSelectEfta: () => void;
 }
-const SideBar = ({ eftaState, onSelectEfta }: Props) => {
+const SideBar = ({ eftaState, currentPlayer, onSelectEfta }: Props) => {
   return (
     <>
       <HStack justifyContent="center" marginY={5}>
@@ -11,11 +12,9 @@ const SideBar = ({ eftaState, onSelectEfta }: Props) => {
           Efita
         </Button>
       </HStack>
-      {/* <HStack justifyContent="center">
-        <Button colorScheme="blue" onClick={() => {}}>
-          Finish moving
-        </Button>
-      </HStack> */}
+      <HStack justifyContent="center">
+        <Text>Current playing: {currentPlayer === 2 ? "fanta" : "cocka"}</Text>
+      </HStack>
     </>
   );
 };

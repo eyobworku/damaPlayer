@@ -25,9 +25,10 @@ const initialSquares: SquareBoard[][] = useBoard();
 interface Props {
   checkEftaVar: boolean;
   offSelectEfta: () => void;
+  updateCurentPlaying: (curPl: number) => void;
 }
 
-const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
+const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
   const [korkiState, setKorkiState] = useState<Korki[]>(initialKorki);
   const [firstSelected, setFirstSelected] = useState<Korki | null>(null);
   const [eftaState, setEftaState] = useState<Efta>({
@@ -39,27 +40,32 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
   useEffect(() => {
     setEftaState({ ...eftaState, prevKorkiState: korkiState });
   }, [korkiState]);
-
+  useEffect(() => {
+    updateCurentPlaying(currentPlayer);
+  }, [currentPlayer]);
   const updateSquare = (korki: Korki) => {
     if (firstSelected === null && korki.type === 3) {
       return;
     }
 
     if (firstSelected === null) {
-      //check currebt player order
+      //check current player order
+      if (checkEftaVar) {
+        if (korki.type !== currentPlayer) {
+          return;
+        }
+      }
       if (korki.type === currentPlayer && !checkEftaVar) {
         return;
       }
       setKorkiState(
-        korkiState.map((k) =>
-          k.customKey === korki.customKey ? { ...k, selected: 1 } : k
-        )
+        korkiState.map((k) => (k.id === korki.id ? { ...k, selected: 1 } : k))
       );
       setFirstSelected(korki);
-    } else if (firstSelected.customKey === korki.customKey) {
+    } else if (firstSelected.id === korki.id) {
       setKorkiState(
         korkiState.map((k) =>
-          k.customKey === firstSelected.customKey ? { ...k, selected: 0 } : k
+          k.id === firstSelected.id ? { ...k, selected: 0 } : k
         )
       );
       setFirstSelected(null);
@@ -80,15 +86,14 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       let varEat = -1;
       let varNigus = false;
       let secondMove = false;
-      //check ongoing movement
+
+      //check ongoing movement / second move
       if (firstType.selected === 2) {
         const { movable, eat, nigus } = checkEatable(
           firstType,
           newType,
           korkiState
         );
-        // console.log(firstType.customKey, newType.customKey);
-        console.log(movable, eat, nigus);
         if (eat !== -1) {
           varMovable = movable;
           varEat = eat;
@@ -106,7 +111,6 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
 
       //efta eating
       if (!eftaState.doesEat && checkEftaVar) {
-        console.log("check...");
         const { movable, eat, nigus } = checkEatable(
           firstType,
           newType,
@@ -184,14 +188,13 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       } else {
         setKorkiState(
           korkiState.map((k) =>
-            k.customKey === firstSelected.customKey ? { ...k, selected: 0 } : k
+            k.id === firstSelected.id ? { ...k, selected: 0 } : k
           )
         );
         setFirstSelected(null);
       }
     }
   };
-  // const updateKorkiState = (firstSelected:Korki,korki:Korki,korkiState:Korki[])=>{}
 
   const getDisDir = (firstType: ExtendedKorki, newType: ExtendedKorki) => {
     let dis = 0;
@@ -225,60 +228,72 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
       0,
       dis
     );
-    // console.log(diagId);
+
     // nigus moves
     if (firstType.nigus) {
       return findOtherTypeKorkiId(diagId, firstType.type, korkiState);
     }
 
-    //Backward
-    if (firstType.type === 2 && dir.startsWith("down")) {
-      // console.log("Down Back");
-      backWard = true;
+    const { varBackWard, varMovable, varEat } = checkBackMove(
+      firstType,
+      diagId,
+      korkiState,
+      dir
+    );
+    backWard = varBackWard;
+    movable = varMovable;
+    eat = varEat;
+
+    //forward movement and check nigus
+    if (!backWard || diagId.length < 3) {
       if (diagId.length === 2) {
-        eat =
-          korkiState[diagId[0]].type === 1 && korkiState[diagId[1]].type === 3
-            ? diagId[0]
-            : -1;
-        movable = eat === -1 ? false : true;
+        if (
+          korkiState[diagId[0]].type !== firstType.type &&
+          korkiState[diagId[0]].type !== 3
+        ) {
+          eat = korkiState[diagId[1]].type === 3 ? diagId[0] : -1;
+          movable = eat === -1 ? false : true;
+        } else {
+          movable = false;
+        }
+      } else if (diagId.length === 1) {
+        movable = korkiState[diagId[0]].type === 3 && firstType.selected !== 2;
       }
-    } else if (firstType.type === 1 && dir.startsWith("up")) {
-      // console.log("Up Back");
-      backWard = true;
-      if (diagId.length === 2) {
-        eat =
-          korkiState[diagId[0]].type === 2 && korkiState[diagId[1]].type === 3
-            ? diagId[0]
-            : -1;
-        movable = eat === -1 ? false : true;
-      }
+      nigus =
+        (firstType.type === 1 && newType.x === 7) ||
+        (firstType.type === 2 && newType.x === 0)
+          ? true
+          : false; // firstType.nigus === true ? true :
     }
 
-    //forward movement
-    if (diagId.length === 2 && !backWard) {
-      if (
-        korkiState[diagId[0]].type !== firstType.type &&
-        korkiState[diagId[0]].type !== 3
-      ) {
-        eat = korkiState[diagId[1]].type === 3 ? diagId[0] : -1;
-        movable = eat === -1 ? false : true;
-        // console.log(movable, eat);
-      } else {
-        movable = false;
-      }
-    } else if (diagId.length === 1 && !backWard) {
-      movable = korkiState[diagId[0]].type === 3 && firstType.selected !== 2;
-    }
-
-    //check if it can be nigus
-    nigus =
-      (firstType.type === 1 && newType.x === 7) ||
-      (firstType.type === 2 && newType.x === 0)
-        ? true
-        : false; // firstType.nigus === true ? true :
     return { movable, eat, nigus };
   };
+  const checkBackMove = (
+    firstType: ExtendedKorki,
+    diagId: number[],
+    korkiState: Korki[],
+    dir: string
+  ) => {
+    let varBackWard = true;
+    let varMovable = false;
+    let varEat = -1;
+    const direction = firstType.type === 1 ? "up" : "down";
+    const opostion = firstType.type === 1 ? 2 : 1;
 
+    if (dir.startsWith(direction)) {
+      if (diagId.length === 2) {
+        varEat =
+          korkiState[diagId[0]].type === opostion &&
+          korkiState[diagId[1]].type === 3
+            ? diagId[0]
+            : -1;
+        varMovable = varEat === -1 ? false : true;
+      }
+    } else {
+      varBackWard = false;
+    }
+    return { varBackWard, varMovable, varEat };
+  };
   //nigus move check
   const findOtherTypeKorkiId = (
     diagId: number[],
@@ -307,6 +322,7 @@ const Board = ({ checkEftaVar, offSelectEfta }: Props) => {
 
     return { movable, eat, nigus: true };
   };
+
   function moveableDirection(x: number, y: number, dir: string) {
     let newX = x;
     let newY = y;

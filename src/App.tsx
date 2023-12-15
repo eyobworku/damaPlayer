@@ -6,6 +6,7 @@ import { useState } from "react";
 
 function App() {
   const [eftaState, setEftaState] = useState(false);
+  const [currentPlayer, setCurrentPlayer] = useState(0);
   return (
     <>
       <Grid
@@ -20,12 +21,24 @@ function App() {
         <GridItem area={"main"} gridColumn="1">
           <Board
             checkEftaVar={eftaState}
-            offSelectEfta={() => setEftaState(false)}
+            offSelectEfta={() => {
+              setEftaState(false);
+            }}
+            updateCurentPlaying={(curPl) => {
+              setCurrentPlayer(curPl);
+            }}
           />
         </GridItem>
-        <GridItem marginY={3} bg="gray" area={"side"} gridColumn="2">
+        <GridItem
+          marginY={3}
+          bg="gray"
+          area={"side"}
+          gridColumn="2"
+          gridRow="2"
+        >
           <SideBar
             eftaState={eftaState}
+            currentPlayer={currentPlayer}
             onSelectEfta={() => setEftaState(!eftaState)}
           />
         </GridItem>
