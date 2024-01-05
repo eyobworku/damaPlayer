@@ -1,8 +1,9 @@
 import { Box, Center, Flex } from "@chakra-ui/react";
 import SquareBox from "./SquareBox";
 import useBoard, { SquareBoard } from "../hooks/useBoard";
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import useKorki, { Korki } from "../hooks/useKorki";
+import gameReducer from "./gameReducer";
 
 export interface GameBoard {
   winner: string;
@@ -29,7 +30,8 @@ interface Props {
 }
 
 const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
-  const [korkiState, setKorkiState] = useState<Korki[]>(initialKorki);
+  // const [korkiState, setKorkiState] = useState<Korki[]>(initialKorki);
+  const [korkiState, dispath] = useReducer(gameReducer, initialKorki);
   const [firstSelected, setFirstSelected] = useState<Korki | null>(null);
   const [eftaState, setEftaState] = useState<Efta>({
     prevKorkiState: korkiState,
@@ -58,16 +60,19 @@ const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
       if (korki.type === currentPlayer && !checkEftaVar) {
         return;
       }
-      setKorkiState(
-        korkiState.map((k) => (k.id === korki.id ? { ...k, selected: 1 } : k))
-      );
+      dispath({
+        type: "SET_TYPE_AND_SELECTED",
+        selectID: korki.id,
+        setSelected: 1,
+      });
       setFirstSelected(korki);
     } else if (firstSelected.id === korki.id) {
-      setKorkiState(
-        korkiState.map((k) =>
-          k.id === firstSelected.id ? { ...k, selected: 0 } : k
-        )
-      );
+      dispath({
+        type: "SET_TYPE_AND_SELECTED",
+        selectID: firstSelected.id,
+        setSelected: 0,
+      });
+
       setFirstSelected(null);
     } else {
       //main logic
@@ -99,11 +104,11 @@ const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
           varEat = eat;
           varNigus = nigus;
         } else {
-          setKorkiState(
-            korkiState.map((k) =>
-              k.id === firstType.id ? { ...k, selected: 0 } : k
-            )
-          );
+          dispath({
+            type: "SET_TYPE_AND_SELECTED",
+            selectID: firstType.id,
+            setSelected: 0,
+          });
           setFirstSelected(null);
         }
         secondMove = true;
@@ -139,28 +144,15 @@ const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
 
       if (varMovable) {
         if (!eatEfta) {
-          setKorkiState(
-            korkiState.map((k) => {
-              if (k.id === korki.id) {
-                return {
-                  ...k,
-                  type: firstType.type,
-                  nigus: varNigus,
-                  selected: varEat === -1 ? 0 : 2,
-                }; // Update the type of the clicked Korki to firstSelected's type
-              } else if (k.id === firstSelected.id) {
-                return {
-                  ...k,
-                  type: newType.type,
-                  selected: 0,
-                  nigus: false,
-                }; // Update the type of the firstSelected Korki to clicked Korki's type
-              } else if (k.id === varEat) {
-                return { ...k, type: 3, selected: 0, nigus: false }; // Update the type of the firstSelected Korki to clicked Korki's type
-              }
-              return k;
-            })
-          );
+          dispath({
+            type: "UPDATE_KORKI_STATE",
+            korkiId: korki.id,
+            korkiType: newType.type,
+            firstId: firstSelected.id,
+            firstType: firstType.type,
+            varEat: varEat,
+            varNigus: varNigus,
+          });
           setCurrentPlayer(firstType.type);
           if (varEat === -1) {
             setFirstSelected(null);
@@ -174,23 +166,16 @@ const Board = ({ checkEftaVar, offSelectEfta, updateCurentPlaying }: Props) => {
             });
           }
         } else if (eatEfta) {
-          setKorkiState(
-            korkiState.map((k) => {
-              if (k.id === firstSelected.id) {
-                return { ...k, type: 3, selected: 0, nigus: false }; // eat the efta
-              }
-              return k;
-            })
-          );
+          dispath({ type: "EAT_EFTA", eftaKorkiId: firstSelected.id });
           setFirstSelected(null);
         }
         setEftaState({ ...eftaState, doesEat: varEat !== -1 ? true : false });
       } else {
-        setKorkiState(
-          korkiState.map((k) =>
-            k.id === firstSelected.id ? { ...k, selected: 0 } : k
-          )
-        );
+        dispath({
+          type: "SET_TYPE_AND_SELECTED",
+          selectID: firstSelected.id,
+          setSelected: 0,
+        });
         setFirstSelected(null);
       }
     }
