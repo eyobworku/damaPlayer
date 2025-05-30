@@ -313,7 +313,6 @@ const Board = ({
     }
     return { varBackWard, varMovable, varEat };
   };
-
   //nigus move check
   const findOtherTypeKorkiId = (
     diagId: number[],
