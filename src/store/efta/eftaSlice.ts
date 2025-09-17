@@ -1,5 +1,5 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { Korki } from "../../hooks/useKorki";
+import { Korki } from "../../types/korki";
 
 interface Efta {
   prevKorkiState: Korki[];
@@ -19,7 +19,7 @@ const eftaSlice = createSlice({
       const { newEfta, firstId } = action.payload;
       if (newEfta.prevKorkiState.length === 32) {
         const newState: Efta = { ...state };
-        newState.prevKorkiState = { ...newEfta.prevKorkiState };
+        newState.prevKorkiState = [...newEfta.prevKorkiState];
         newState.prevKorkiState[firstId] = {
           ...newState.prevKorkiState[firstId],
           selected: 0,

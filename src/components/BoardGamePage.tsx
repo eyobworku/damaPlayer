@@ -2,7 +2,7 @@ import { Grid, GridItem } from "@chakra-ui/react";
 import Board from "./Board";
 import NavBar from "./NavBar";
 import SideBar from "./SideBar";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useGameState from "../hooks/useGameState";
 
 function BoardGamePage() {

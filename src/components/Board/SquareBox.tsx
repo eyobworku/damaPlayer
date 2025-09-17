@@ -1,9 +1,9 @@
 import { Box, Image } from "@chakra-ui/react";
-import cocka from "../assets/coca-cola-png-41660.png";
-import fanta from "../assets/Fanta.webp";
+import cocka from "../../assets/coca-cola-png-41660.png";
+import fanta from "../../assets/Fanta.webp";
 import { useEffect, useState } from "react";
-import { Korki } from "../hooks/useKorki";
-import blClown from "../assets/black_crown.png";
+import { Korki } from "../../types/korki";
+import blClown from "../../assets/black_crown.png";
 
 interface Props {
   onSelectSquare: (selKorki: Korki) => void;

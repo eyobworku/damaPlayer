@@ -1,5 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import useKorki, { Korki } from "../../hooks/useKorki";
+import useKorki from "../../hooks/useKorki";
+import { Korki } from "../../types/korki";
 const initialState: Korki[] = useKorki();
 
 const korkiSlice = createSlice({

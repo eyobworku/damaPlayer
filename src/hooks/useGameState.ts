@@ -1,9 +1,8 @@
 // useGameState.ts
-import { useState, useEffect, useReducer } from "react";
-import useKorki, { Korki } from "../hooks/useKorki";
-import gameReducer, { Action } from "../components/gameReducer";
+import { useState } from "react";
+import { Korki } from "../types/korki";
 import { Efta } from "../components/Board";
-import { socket } from "../services/socket-client";
+// import { socket } from "../services/socket-client";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 
@@ -21,27 +20,8 @@ export interface GameState {
 const useGameState = (gameId: number): GameState => {
   const korkiState = useSelector((state: RootState) => state.korki);
   const eftaState = useSelector((state: RootState) => state.efta);
-  // const initialKorki: Korki[] = useKorki();
   const [firstSelected, setFirstSelected] = useState<Korki | null>(null);
-  // const [korkiState, dispatch] = useReducer(gameReducer, initialKorki);
-  // const [eftaState, setEftaState] = useState<Efta>({
-  //   prevKorkiState: korkiState,
-  //   doesEat: false,
-  // });
   const [currentPlayer, setCurrentPlayer] = useState<number>(2);
-  // useEffect(() => {
-  //   setEftaState({ ...eftaState, prevKorkiState: korkiState });
-  //   socket.emit("update korki", { korkiState, gameId });
-  //   socket.on("update korki", (updatedKorkiState): any => {
-  //     if (JSON.stringify(updatedKorkiState) !== JSON.stringify(korkiState)) {
-  //       dispatch({ type: "UPDATE_KORKI", newKorkiState: updatedKorkiState });
-  //       console.log("Update ks ", updatedKorkiState);
-  //     }
-  //   });
-  //   return () => {
-  //     socket.off("update korki");
-  //   };
-  // }, [korkiState]);
 
   return {
     korkiState,
