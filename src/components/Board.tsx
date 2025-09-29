@@ -3,6 +3,7 @@ import SquareBox from "./Board/SquareBox";
 import useBoard, { SquareBoard } from "../hooks/useBoard";
 import { useEffect, useState } from "react";
 import { Korki } from "../types/korki";
+import { Efta } from "../types/efta";
 import { useDispatch } from "react-redux";
 import {
   updateKorkiState,
@@ -10,17 +11,12 @@ import {
   eatEftaById,
   updateKorki,
 } from "../store/korki/korkiSlice";
-import { setEftaLatest } from "../store/efta/eftaSlice";
+import { setEftaLatest, setHasTaken } from "../store/efta/eftaSlice";
 import { checkEatable } from "../utils/board_functions";
 
 export interface GameBoard {
   winner: string;
   squares: SquareBoard[][];
-}
-
-export interface Efta {
-  prevKorkiState: Korki[];
-  doesEat: boolean;
 }
 //type 1 fanta down / 2 coka up
 // for(let i=0;i<8;i++){ let row = []
@@ -60,20 +56,21 @@ const Board = ({
     updateCurentPlaying(currentPlayer);
   }, [currentPlayer]);
   useEffect(() => {
-    if (checkEftaVar) {
+    if (checkEftaVar && eftaState.prevKorkiState.length === 32) {
       setLatestKorki(korkiState);
       dispatch(updateKorki(eftaState.prevKorkiState));
-    } else if (!checkEftaVar && latestKorki.length !== 0) {
+    } else if (
+      !checkEftaVar &&
+      latestKorki.length !== 0 &&
+      !eftaState.hasTaken
+    ) {
       dispatch(updateKorki(latestKorki));
       setLatestKorki([]);
     }
   }, [checkEftaVar]);
-  // useEffect(() => {
-  //   console.log(korkiState);
-  // }, [korkiState]);
   useEffect(() => {
-    console.log(initialSquares);
-  }, [initialSquares]);
+    console.log(eftaState.hasTaken);
+  }, [eftaState.hasTaken]);
   const checkEfta = (korki: Korki) => {
     if (korki.type === currentPlayer) {
       return;
@@ -84,8 +81,6 @@ const Board = ({
       if (korki.type === currentPlayer) {
         return;
       }
-      console.log("here");
-
       dispatch(setTypeAndSelected({ selectID: korki.id, setSelected: 1 }));
       setFirstSelected(korki);
     } else if (firstSelected.id === korki.id) {
@@ -94,32 +89,28 @@ const Board = ({
         setTypeAndSelected({ selectID: firstSelected.id, setSelected: 0 })
       );
       setFirstSelected(null);
+    } else {
+      //main logic
+      const firstType = {
+        ...firstSelected,
+        x: parseInt(firstSelected.customKey.charAt(0)),
+        y: parseInt(firstSelected.customKey.charAt(1)),
+      };
+      const newType = {
+        ...korki,
+        x: parseInt(korki.customKey.charAt(0)),
+        y: parseInt(korki.customKey.charAt(1)),
+      };
+      let varEat = -1;
+      const { eat } = checkEatable(firstType, newType, korkiState);
+      varEat = eat;
+      if (varEat !== -1) {
+        dispatch(eatEftaById({ latestKorki, eatKorkId: firstSelected.id }));
+        setFirstSelected(null);
+        dispatch(setHasTaken(true));
+        offSelectEfta();
+      }
     }
-    let eatEfta = false;
-
-    //efta eating check
-    // if (!eftaState.doesEat) {
-    //   const { movable, eat, nigus } = checkEatable(
-    //     firstType,
-    //     newType,
-    //     eftaState.prevKorkiState
-    //   );
-    //   if (eat !== -1) {
-    //     eatEfta = true;
-    //     varMovable = movable;
-    //     varNigus = nigus;
-    //   } else {
-    //     varMovable = false;
-    //   }
-
-    //   offSelectEfta();
-    // }
-
-    //remove the eaten efta
-    // if (eatEfta) {
-    //   dispatch(eatEftaById(firstSelected.id));
-    //   setFirstSelected(null);
-    // }
   };
   const updateSquare = (korki: Korki) => {
     //empty square
@@ -220,6 +211,7 @@ const Board = ({
             newEfta: {
               doesEat: varEat !== -1,
               prevKorkiState: korkiState,
+              hasTaken: false,
             },
             firstId: firstSelected.id,
           })

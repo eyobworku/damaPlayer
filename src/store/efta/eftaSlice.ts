@@ -1,12 +1,10 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { Korki } from "../../types/korki";
-
-interface Efta {
-  prevKorkiState: Korki[];
-  doesEat: boolean;
-}
-
-const initialState: Efta = { prevKorkiState: [], doesEat: false };
+import { Efta } from "../../types/efta";
+const initialState: Efta = {
+  prevKorkiState: [],
+  doesEat: false,
+  hasTaken: false,
+};
 
 const eftaSlice = createSlice({
   name: "efta",
@@ -25,11 +23,15 @@ const eftaSlice = createSlice({
           selected: 0,
         };
         newState.doesEat = newEfta.doesEat;
+        newState.hasTaken = newEfta.hasTaken;
         return newState;
       }
+    },
+    setHasTaken: (state, action: PayloadAction<boolean>) => {
+      state.hasTaken = action.payload;
     },
   },
 });
 
-export const { setEftaLatest } = eftaSlice.actions;
+export const { setEftaLatest, setHasTaken } = eftaSlice.actions;
 export default eftaSlice.reducer;

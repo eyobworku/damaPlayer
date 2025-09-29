@@ -1,7 +1,7 @@
 // useGameState.ts
 import { useState } from "react";
 import { Korki } from "../types/korki";
-import { Efta } from "../components/Board";
+import { Efta } from "../types/efta";
 // import { socket } from "../services/socket-client";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
@@ -17,7 +17,7 @@ export interface GameState {
   setCurrentPlayer: React.Dispatch<React.SetStateAction<number>>;
 }
 
-const useGameState = (gameId: number): GameState => {
+const useGameState = (_: number): GameState => {
   const korkiState = useSelector((state: RootState) => state.korki);
   const eftaState = useSelector((state: RootState) => state.efta);
   const [firstSelected, setFirstSelected] = useState<Korki | null>(null);
