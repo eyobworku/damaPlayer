@@ -3,6 +3,7 @@ interface Efta {
   prevKorkiState: Korki[];
   doesEat: boolean;
   hasTaken: boolean;
+  checkEfta: boolean;
 }
 type EftaWithoutHasTaken = Omit<Efta, "hasTaken">;
 

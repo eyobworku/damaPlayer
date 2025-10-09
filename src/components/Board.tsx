@@ -3,7 +3,6 @@ import SquareBox from "./Board/SquareBox";
 import useBoard, { SquareBoard } from "../hooks/useBoard";
 import { useEffect, useState } from "react";
 import { Korki } from "../types/korki";
-import { Efta } from "../types/efta";
 import { useDispatch } from "react-redux";
 import {
   updateKorkiState,
@@ -11,8 +10,13 @@ import {
   eatEftaById,
   updateKorki,
 } from "../store/korki/korkiSlice";
-import { setEftaLatest, setHasTaken } from "../store/efta/eftaSlice";
+import {
+  setEftaLatest,
+  setHasTaken,
+  setCheckEfta,
+} from "../store/efta/eftaSlice";
 import { checkEatable } from "../utils/board_functions";
+import useGameState from "../hooks/useGameState";
 
 export interface GameBoard {
   winner: string;
@@ -23,55 +27,35 @@ export interface GameBoard {
 //   for(let j=0;j<8;j++){ row.push(`${i}${j}`)}console.log(row)}
 
 const initialSquares: SquareBoard[][] = useBoard();
-interface Props {
-  checkEftaVar: boolean;
-  offSelectEfta: () => void;
-  updateCurentPlaying: (curPl: number) => void;
-  currentPlayer: number; // Add currentPlayer prop
-  setCurrentPlayer: React.Dispatch<React.SetStateAction<number>>;
-  korkiState: Korki[]; // State for korkis
-  // dispatch: React.Dispatch<Action>; // Dispatch function for updating korkiState
-  firstSelected: Korki | null; // State for storing the first selected korki
-  setFirstSelected: React.Dispatch<React.SetStateAction<Korki | null>>; // Function for updating firstSelected state
-  eftaState: Efta; // State for efta
-  // setEftaState: React.Dispatch<
-  //   React.SetStateAction<{ prevKorkiState: Korki[]; doesEat: boolean }>
-  // >;
-}
 
-const Board = ({
-  checkEftaVar,
-  offSelectEfta,
-  updateCurentPlaying,
-  currentPlayer,
-  setCurrentPlayer,
-  korkiState,
-  firstSelected,
-  setFirstSelected,
-  eftaState,
-}: Props) => {
+const Board = () => {
+  const {
+    korkiState,
+    firstSelected,
+    setFirstSelected,
+    eftaState,
+    currentPlayer,
+    setCurrentPlayer,
+  } = useGameState();
   const dispatch = useDispatch();
+  const { prevKorkiState, checkEfta, hasTaken } = eftaState;
   const [latestKorki, setLatestKorki] = useState<Korki[]>([]);
   useEffect(() => {
-    updateCurentPlaying(currentPlayer);
+    setCurrentPlayer(currentPlayer);
   }, [currentPlayer]);
   useEffect(() => {
-    if (checkEftaVar && eftaState.prevKorkiState.length === 32) {
+    if (checkEfta && prevKorkiState.length === 32) {
       setLatestKorki(korkiState);
-      dispatch(updateKorki(eftaState.prevKorkiState));
-    } else if (
-      !checkEftaVar &&
-      latestKorki.length !== 0 &&
-      !eftaState.hasTaken
-    ) {
+      dispatch(updateKorki(prevKorkiState));
+    } else if (!checkEfta && latestKorki.length !== 0 && !hasTaken) {
       dispatch(updateKorki(latestKorki));
       setLatestKorki([]);
     }
-  }, [checkEftaVar]);
+  }, [checkEfta]);
   useEffect(() => {
-    console.log(eftaState.hasTaken);
-  }, [eftaState.hasTaken]);
-  const checkEfta = (korki: Korki) => {
+    console.log(hasTaken);
+  }, [hasTaken]);
+  const checkEftaFun = (korki: Korki) => {
     if (korki.type === currentPlayer) {
       return;
     }
@@ -108,7 +92,7 @@ const Board = ({
         dispatch(eatEftaById({ latestKorki, eatKorkId: firstSelected.id }));
         setFirstSelected(null);
         dispatch(setHasTaken(true));
-        offSelectEfta();
+        dispatch(setCheckEfta(false));
       }
     }
   };
@@ -117,8 +101,8 @@ const Board = ({
     if (firstSelected === null && korki.type === 3) {
       return;
     }
-    if (checkEftaVar) {
-      checkEfta(korki);
+    if (checkEfta) {
+      checkEftaFun(korki);
       return;
     }
     //select the first korki to move

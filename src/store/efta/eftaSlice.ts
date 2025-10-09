@@ -4,6 +4,7 @@ const initialState: Efta = {
   prevKorkiState: [],
   doesEat: false,
   hasTaken: false,
+  checkEfta: false,
 };
 
 const eftaSlice = createSlice({
@@ -12,7 +13,10 @@ const eftaSlice = createSlice({
   reducers: {
     setEftaLatest: (
       state,
-      action: PayloadAction<{ newEfta: Efta; firstId: number }>
+      action: PayloadAction<{
+        newEfta: Omit<Efta, "checkEfta">;
+        firstId: number;
+      }>
     ) => {
       const { newEfta, firstId } = action.payload;
       if (newEfta.prevKorkiState.length === 32) {
@@ -30,8 +34,11 @@ const eftaSlice = createSlice({
     setHasTaken: (state, action: PayloadAction<boolean>) => {
       state.hasTaken = action.payload;
     },
+    setCheckEfta: (state, action: PayloadAction<boolean>) => {
+      state.checkEfta = action.payload;
+    },
   },
 });
 
-export const { setEftaLatest, setHasTaken } = eftaSlice.actions;
+export const { setEftaLatest, setHasTaken, setCheckEfta } = eftaSlice.actions;
 export default eftaSlice.reducer;
