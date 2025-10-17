@@ -9,8 +9,8 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/board" element={<BoardGamePage />} />
-        <Route path="/create" element={<MultiplayerModeSelector />} />
-        <Route path="/" element={<CountWraper />} />
+        <Route path="/" element={<MultiplayerModeSelector />} />
+        <Route path="/count" element={<CountWraper />} />
       </Routes>
     </Router>
   );

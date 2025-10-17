@@ -1,7 +1,7 @@
 import { Box, Center, Flex } from "@chakra-ui/react";
 import SquareBox from "./Board/SquareBox";
 import useBoard, { SquareBoard } from "../hooks/useBoard";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Korki } from "../types/korki";
 import { useDispatch } from "react-redux";
 import {
@@ -15,9 +15,11 @@ import {
   setHasTaken,
   setCheckEfta,
 } from "../store/efta/eftaSlice";
+import { setFirstSelected, setCurrentPlayer } from "../store/var/varSlice";
 import { checkEatable } from "../utils/board_functions";
 import useGameState from "../hooks/useGameState";
-
+import socket from "../utils/socket";
+import useOnlineState from "../hooks/useOnlineState";
 export interface GameBoard {
   winner: string;
   squares: SquareBoard[][];
@@ -29,19 +31,25 @@ export interface GameBoard {
 const initialSquares: SquareBoard[][] = useBoard();
 
 const Board = () => {
-  const {
-    korkiState,
-    firstSelected,
-    setFirstSelected,
-    eftaState,
-    currentPlayer,
-    setCurrentPlayer,
-  } = useGameState();
+  const { online, playerId, isMyTurn } = useOnlineState();
+  // useEffect(() => {
+  //   console.log(
+  //     "isMyTurn: ",
+  //     isMyTurn,
+  //     "playerId: ",
+  //     playerId,
+  //     "online: ",
+  //     online
+  //   );
+  // }, [isMyTurn, playerId, online]);
+  const { korkiState, firstSelected, eftaState, currentPlayer } =
+    useGameState();
   const dispatch = useDispatch();
   const { prevKorkiState, checkEfta, hasTaken } = eftaState;
   const [latestKorki, setLatestKorki] = useState<Korki[]>([]);
+
   useEffect(() => {
-    setCurrentPlayer(currentPlayer);
+    dispatch(setCurrentPlayer(currentPlayer));
   }, [currentPlayer]);
   useEffect(() => {
     if (checkEfta && prevKorkiState.length === 32) {
@@ -52,9 +60,53 @@ const Board = () => {
       setLatestKorki([]);
     }
   }, [checkEfta]);
-  useEffect(() => {
-    console.log(hasTaken);
-  }, [hasTaken]);
+  const eftaMovedKorki = useCallback(
+    (takenId: number) => {
+      let x1: number = -1;
+      let x2: number = -1;
+      for (let i = 0; i < latestKorki.length; i++) {
+        if (latestKorki[i].type !== korkiState[i].type) {
+          if (x1 === -1) {
+            x1 = i;
+          } else if (x2 === -1) {
+            x2 = i;
+          }
+        }
+      }
+      console.log(x1, x2, latestKorki[x1], latestKorki[x2]);
+
+      if (x1 !== -1 && x2 !== -1 && takenId !== x1 && takenId !== x2) {
+        const interChange = true;
+        return [x1, x2, interChange, latestKorki[x1], latestKorki[x2]] as const;
+      } else {
+        return [x1, x2, false, null, null] as const;
+      }
+    },
+    [latestKorki, korkiState]
+  );
+  const eftaMoveFunc = (
+    eatKorkId: number,
+    x1: number,
+    x2: number,
+    interChange: boolean,
+    x1Korki: Korki | null,
+    x2Korki: Korki | null
+  ) => {
+    dispatch(
+      eatEftaById({
+        index: eatKorkId,
+        x1,
+        x2,
+        interChange,
+        x1Korki,
+        x2Korki,
+      })
+    );
+    dispatch(setFirstSelected(null));
+    dispatch(setHasTaken(true));
+    dispatch(setCheckEfta(false));
+  };
+
   const checkEftaFun = (korki: Korki) => {
     if (korki.type === currentPlayer) {
       return;
@@ -66,36 +118,97 @@ const Board = () => {
         return;
       }
       dispatch(setTypeAndSelected({ selectID: korki.id, setSelected: 1 }));
-      setFirstSelected(korki);
+      dispatch(setFirstSelected(korki));
     } else if (firstSelected.id === korki.id) {
       //deselect the selected or unselect
       dispatch(
         setTypeAndSelected({ selectID: firstSelected.id, setSelected: 0 })
       );
-      setFirstSelected(null);
+      dispatch(setFirstSelected(null));
     } else {
       //main logic
-      const firstType = {
-        ...firstSelected,
-        x: parseInt(firstSelected.customKey.charAt(0)),
-        y: parseInt(firstSelected.customKey.charAt(1)),
-      };
-      const newType = {
-        ...korki,
-        x: parseInt(korki.customKey.charAt(0)),
-        y: parseInt(korki.customKey.charAt(1)),
-      };
-      let varEat = -1;
-      const { eat } = checkEatable(firstType, newType, korkiState);
-      varEat = eat;
-      if (varEat !== -1) {
-        dispatch(eatEftaById({ latestKorki, eatKorkId: firstSelected.id }));
-        setFirstSelected(null);
-        dispatch(setHasTaken(true));
-        dispatch(setCheckEfta(false));
+      const { eat } = checkEatable(firstSelected, korki, korkiState);
+      if (eat !== -1) {
+        const [x1, x2, interChange, x1Korki, x2Korki] = eftaMovedKorki(
+          firstSelected.id
+        );
+        console.log(firstSelected.id, x1, x2, x1Korki, x2Korki);
+
+        if (online) {
+          socket.emit("eatEfta", {
+            eatKorkId: firstSelected.id,
+            x1,
+            x2,
+            interChange,
+            x1Korki,
+            x2Korki,
+            takenBy: playerId,
+          });
+        } else {
+          eftaMoveFunc(firstSelected.id, x1, x2, interChange, x1Korki, x2Korki);
+        }
       }
     }
   };
+
+  const makeMoveFunc = useCallback(
+    (korki: Korki, firstSelected: Korki, varEat: number, varNigus: boolean) => {
+      const prevStateSnapshot = JSON.parse(JSON.stringify(korkiState));
+      dispatch(
+        updateKorkiState({
+          korki: korki,
+          first: firstSelected,
+          varEat: varEat,
+          varNigus: varNigus,
+        })
+      );
+      dispatch(setCurrentPlayer(firstSelected.type === 1 ? 2 : 1));
+      dispatch(
+        setFirstSelected(
+          varEat === -1
+            ? null
+            : {
+                ...korkiState[korki.id],
+                type: firstSelected.type,
+                nigus: varNigus,
+                selected: 2,
+              }
+        )
+      );
+      //update previous estate for efta
+      dispatch(
+        setEftaLatest({
+          newEfta: {
+            doesEat: varEat !== -1,
+            prevKorkiState: prevStateSnapshot,
+            hasTaken: false,
+          },
+          firstId: firstSelected.id,
+        })
+      );
+    },
+    [korkiState, dispatch]
+  );
+  useEffect(() => {
+    socket.on("takenEfta", (data: any) => {
+      const { eatKorkId, x1, x2, interChange, x1Korki, x2Korki, takenBy } =
+        data;
+      console.log("taken", takenBy, eatKorkId);
+      eftaMoveFunc(eatKorkId, x1, x2, interChange, x1Korki, x2Korki);
+    });
+    return () => {
+      socket.off("takenEfta");
+    };
+  }, [eftaMoveFunc]);
+  useEffect(() => {
+    socket.on("moveMade", (data: any) => {
+      const { korki, firstSelected, varEat, varNigus } = data;
+      makeMoveFunc(korki, firstSelected, varEat, varNigus);
+    });
+    return () => {
+      socket.off("moveMade");
+    };
+  }, [makeMoveFunc]);
   const updateSquare = (korki: Korki) => {
     //empty square
     if (firstSelected === null && korki.type === 3) {
@@ -113,35 +226,25 @@ const Board = () => {
       }
 
       dispatch(setTypeAndSelected({ selectID: korki.id, setSelected: 1 }));
-      setFirstSelected(korki);
+      dispatch(setFirstSelected(korki));
     } else if (firstSelected.id === korki.id) {
       //deselect the selected or unselect
       dispatch(
         setTypeAndSelected({ selectID: firstSelected.id, setSelected: 0 })
       );
-      setFirstSelected(null);
+      dispatch(setFirstSelected(null));
     } else {
       //main logic
-      const firstType = {
-        ...firstSelected,
-        x: parseInt(firstSelected.customKey.charAt(0)),
-        y: parseInt(firstSelected.customKey.charAt(1)),
-      };
-      const newType = {
-        ...korki,
-        x: parseInt(korki.customKey.charAt(0)),
-        y: parseInt(korki.customKey.charAt(1)),
-      };
       let varMovable = false;
       let varEat = -1;
       let varNigus = false;
       let secondMove = false;
 
       //check ongoing movement / second move after eating
-      if (firstType.selected === 2) {
+      if (firstSelected.selected === 2) {
         const { movable, eat, nigus } = checkEatable(
-          firstType,
-          newType,
+          firstSelected,
+          korki,
           korkiState
         );
         if (eat !== -1) {
@@ -150,9 +253,9 @@ const Board = () => {
           varNigus = nigus;
         } else {
           dispatch(
-            setTypeAndSelected({ selectID: firstType.id, setSelected: 0 })
+            setTypeAndSelected({ selectID: firstSelected.id, setSelected: 0 })
           );
-          setFirstSelected(null);
+          dispatch(setFirstSelected(null));
         }
         secondMove = true;
       }
@@ -160,8 +263,8 @@ const Board = () => {
       if (!secondMove) {
         //normal move checkpoint
         const { movable, eat, nigus } = checkEatable(
-          firstType,
-          newType,
+          firstSelected,
+          korki,
           korkiState
         );
         varMovable = movable;
@@ -170,42 +273,17 @@ const Board = () => {
       }
 
       if (varMovable) {
-        dispatch(
-          updateKorkiState({
-            korki: korki,
-            first: firstSelected,
-            varEat: varEat,
-            varNigus: varNigus,
-          })
-        );
-        setCurrentPlayer(firstType.type === 1 ? 2 : 1);
-        setFirstSelected(
-          varEat === -1
-            ? null
-            : {
-                ...korkiState[korki.id],
-                type: firstType.type,
-                nigus: varNigus,
-                selected: 2,
-              }
-        );
-        //update previous estate for efta
-        dispatch(
-          setEftaLatest({
-            newEfta: {
-              doesEat: varEat !== -1,
-              prevKorkiState: korkiState,
-              hasTaken: false,
-            },
-            firstId: firstSelected.id,
-          })
-        );
+        if (online) {
+          socket.emit("makeMove", { korki, firstSelected, varEat, varNigus });
+        } else {
+          makeMoveFunc(korki, firstSelected, varEat, varNigus);
+        }
       } else {
         //off the selected
         dispatch(
           setTypeAndSelected({ selectID: firstSelected.id, setSelected: 0 })
         );
-        setFirstSelected(null);
+        dispatch(setFirstSelected(null));
       }
     }
   };
@@ -238,6 +316,13 @@ const Board = () => {
       <Center>
         <Box>{renderBoard()}</Box>
       </Center>
+      {online && (
+        <Center mt={3}>
+          <div className="text-sm text-gray-600">
+            {isMyTurn ? "Your turn" : "Opponent's turn"}
+          </div>
+        </Center>
+      )}
     </Box>
   );
 };

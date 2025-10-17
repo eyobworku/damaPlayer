@@ -12,11 +12,17 @@ const getDisDir = (firstType: ExtendedKorki, newType: ExtendedKorki) => {
   return { dir, dis };
 };
 
-const checkEatable = (
-  firstType: ExtendedKorki,
-  newType: ExtendedKorki,
-  korkiState: Korki[]
-) => {
+const checkEatable = (first: Korki, second: Korki, korkiState: Korki[]) => {
+  const firstType: ExtendedKorki = {
+    ...first,
+    x: parseInt(first.customKey.charAt(0)),
+    y: parseInt(first.customKey.charAt(1)),
+  };
+  const newType: ExtendedKorki = {
+    ...second,
+    x: parseInt(second.customKey.charAt(0)),
+    y: parseInt(second.customKey.charAt(1)),
+  };
   let movable = false;
   let backWard = false;
   let nigus = false;

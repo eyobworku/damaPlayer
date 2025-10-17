@@ -19,17 +19,18 @@ const eftaSlice = createSlice({
       }>
     ) => {
       const { newEfta, firstId } = action.payload;
+      const newState: Efta = {
+        ...state,
+        prevKorkiState: [...state.prevKorkiState],
+      };
       if (newEfta.prevKorkiState.length === 32) {
-        const newState: Efta = { ...state };
-        newState.prevKorkiState = [...newEfta.prevKorkiState];
-        newState.prevKorkiState[firstId] = {
-          ...newState.prevKorkiState[firstId],
-          selected: 0,
-        };
+        newState.prevKorkiState = newEfta.prevKorkiState.map((k, idx) =>
+          idx === firstId ? { ...k, selected: 0 } : k
+        );
         newState.doesEat = newEfta.doesEat;
         newState.hasTaken = newEfta.hasTaken;
-        return newState;
       }
+      return newState;
     },
     setHasTaken: (state, action: PayloadAction<boolean>) => {
       state.hasTaken = action.payload;

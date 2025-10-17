@@ -56,37 +56,36 @@ const korkiSlice = createSlice({
     },
     eatEftaById: (
       state,
-      action: PayloadAction<{ latestKorki: Korki[]; eatKorkId: number }>
+      action: PayloadAction<{
+        index: number;
+        x1: number;
+        x2: number;
+        interChange: boolean;
+        x1Korki: Korki | null;
+        x2Korki: Korki | null;
+      }>
     ) => {
-      const { latestKorki, eatKorkId } = action.payload;
-      let x1 = -1;
-      let x2 = -1;
-      for (let i = 0; i < latestKorki.length; i++) {
-        if (latestKorki[i].type !== state[i].type) {
-          if (x1 === -1) {
-            x1 = i;
-          } else if (x2 === -1) {
-            x2 = i;
-          }
-        }
-      }
+      // console.log(action.payload);
+      const { index, x1, x2, interChange, x1Korki, x2Korki } = action.payload;
+      state[index].type = 3;
+      state[index].nigus = false;
+      state[index].selected = 0;
+      if (interChange && x1 !== -1 && x2 !== -1 && x1Korki && x2Korki) {
+        state[x1].type = x1Korki?.type;
+        state[x1].nigus = x1Korki?.nigus;
+        state[x1].selected = 0;
 
-      if (eatKorkId !== -1) {
-        const index = eatKorkId;
-        state[index].type = 3;
-        state[index].nigus = false;
-        state[index].selected = 0;
-        if (eatKorkId !== x1 && eatKorkId !== x2) {
-          console.log(x1, x2);
+        state[x2].type = x2Korki?.type;
+        state[x2].nigus = x2Korki?.nigus;
+        state[x2].selected = 0;
+      } else if (!interChange && x1 !== -1 && x2 !== -1) {
+        state[x1].type = 3;
+        state[x1].nigus = false;
+        state[x1].selected = 0;
 
-          state[x1].type = latestKorki[x1].type;
-          state[x1].nigus = latestKorki[x1].nigus;
-          state[x1].selected = 0;
-
-          state[x2].type = latestKorki[x2].type;
-          state[x2].nigus = latestKorki[x2].nigus;
-          state[x2].selected = 0;
-        }
+        state[x2].type = 3;
+        state[x2].nigus = false;
+        state[x2].selected = 0;
       }
     },
     updateKorki: (_state, action: PayloadAction<Korki[]>) => {

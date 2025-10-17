@@ -1,39 +1,41 @@
 import { useState, useEffect } from "react";
 import socket from "../utils/socket";
-import { useNavigate, redirect } from "react-router-dom";
-
+import { useNavigate } from "react-router-dom";
+import useOnlineState from "../hooks/useOnlineState";
+import { useDispatch } from "react-redux";
+import {
+  setRoomId,
+  setPlayerId,
+  setMode,
+  setOnline,
+  setIsMyTurn,
+} from "../store/online/onlineSlice";
 export default function MultiplayerModeSelector() {
-  const [roomId, setRoomId] = useState("");
-  const [gameStarted, setGameStarted] = useState(false);
-  const [isMyTurn, setIsMyTurn] = useState(false);
-  const [mode, setMode] = useState<"one" | "two" | null>(null);
-  const [generatedId, setGeneratedId] = useState("");
-  const [playerId, setPlayerId] = useState("");
+  const { mode, roomId, playerId } = useOnlineState();
+  const [waiting, setWaiting] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
     socket.on("gameCreated", (id) => {
-      setRoomId(id);
-      setGeneratedId(id);
+      dispatch(setRoomId(id));
+      setWaiting(true);
+      dispatch(setIsMyTurn(true));
     });
 
-    socket.on("gameStart", () => {
-      setGameStarted(true);
-      setIsMyTurn(true); // creator starts
-    });
     socket.on("playerJoined", (state: any) => {
       console.log(state);
-      navigate(`/board?mode=online&gameId=${roomId}`);
+      navigate("/board");
     });
 
     socket.on("gameJoined", (id: string) => {
-      setRoomId(id);
-      navigate(`/board?mode=online&gameId=${id}`);
+      dispatch(setRoomId(id));
+      navigate("/board");
     });
 
     // Listen for the player's ID
     socket.on("me", (id) => {
-      setPlayerId(id);
+      dispatch(setPlayerId(id));
     });
 
     return () => {
@@ -43,10 +45,14 @@ export default function MultiplayerModeSelector() {
       socket.off("gameJoined");
       socket.off("me");
     };
-  }, [roomId]);
+  }, [roomId, playerId]);
 
   const createRoom = () => {
     socket.emit("createGame");
+  };
+  const handeleSetMode = (mode: "one" | "two") => {
+    dispatch(setMode(mode));
+    dispatch(setOnline(mode === "two"));
   };
 
   const joinRoom = () => {
@@ -57,7 +63,7 @@ export default function MultiplayerModeSelector() {
     try {
       await navigator.clipboard.writeText(roomId);
       // small visual feedback could be added
-      alert("Room ID copied to clipboard");
+      // alert("Room ID copied to clipboard");
     } catch (e) {
       alert("Unable to copy — select and copy manually: " + roomId);
     }
@@ -79,7 +85,7 @@ export default function MultiplayerModeSelector() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <button
-            onClick={() => setMode("one")}
+            onClick={() => handeleSetMode("one")}
             className={`flex items-center gap-3 p-4 rounded-xl border transition-shadow duration-150 text-left ${
               mode === "one"
                 ? "border-indigo-500 shadow-md"
@@ -110,7 +116,7 @@ export default function MultiplayerModeSelector() {
           </button>
 
           <button
-            onClick={() => setMode("two")}
+            onClick={() => handeleSetMode("two")}
             className={`flex items-center gap-3 p-4 rounded-xl border transition-shadow duration-150 text-left ${
               mode === "two"
                 ? "border-indigo-500 shadow-md"
@@ -178,17 +184,17 @@ export default function MultiplayerModeSelector() {
                     </button>
                     <button
                       onClick={() => {
-                        if (generatedId) copyRoom();
+                        if (roomId) copyRoom();
                       }}
                       className="px-4 py-2 rounded-lg bg-indigo-600 text-white disabled:opacity-50"
-                      disabled={!generatedId}
+                      disabled={!roomId}
                     >
                       Copy
                     </button>
                   </div>
-                  {generatedId && (
+                  {roomId && (
                     <div className="mt-3 p-2 bg-gray-100 rounded text-sm font-mono">
-                      {generatedId}
+                      {roomId}
                     </div>
                   )}
                 </div>
@@ -201,38 +207,35 @@ export default function MultiplayerModeSelector() {
                   <div className="flex gap-2">
                     <input
                       value={roomId}
-                      onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        dispatch(setRoomId(e.target.value.toUpperCase()))
+                      }
                       placeholder="ROOM ID"
                       className="flex-1 px-3 py-2 border rounded-lg text-sm font-mono uppercase"
                     />
                     <button
+                      disabled={!roomId || waiting}
                       onClick={handleJoin}
-                      className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                      className={`px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 ${
+                        waiting ? "cursor-not-allowed" : ""
+                      }`}
                     >
                       Join
                     </button>
                   </div>
 
-                  <div className="mt-3 text-xs text-gray-500">
+                  {/* <div className="mt-3 text-xs text-gray-500">
                     Tip: share the Room ID via chat, email, or a QR code. Plug
                     socket logic into the handlers provided to actually
                     create/join the socket room.
-                  </div>
+                  </div> */}
                 </div>
               </div>
-
-              <div className="flex justify-end">
-                <button
-                  className="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-                  onClick={() =>
-                    alert(
-                      "Ready — integrate onCreateRoom / onJoinRoom to connect sockets"
-                    )
-                  }
-                >
-                  Ready
-                </button>
-              </div>
+              {waiting && (
+                <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
+                  Waiting for another player to join...
+                </div>
+              )}
             </div>
           )}
 
