@@ -16,14 +16,12 @@ import {
   setCheckEfta,
 } from "../store/efta/eftaSlice";
 import { setFirstSelected, setCurrentPlayer } from "../store/var/varSlice";
+import { setIsMyTurn } from "../store/online/onlineSlice";
 import { checkEatable } from "../utils/board_functions";
 import useGameState from "../hooks/useGameState";
 import socket from "../utils/socket";
 import useOnlineState from "../hooks/useOnlineState";
-export interface GameBoard {
-  winner: string;
-  squares: SquareBoard[][];
-}
+
 //type 1 fanta down / 2 coka up
 // for(let i=0;i<8;i++){ let row = []
 //   for(let j=0;j<8;j++){ row.push(`${i}${j}`)}console.log(row)}
@@ -32,25 +30,12 @@ const initialSquares: SquareBoard[][] = useBoard();
 
 const Board = () => {
   const { online, playerId, isMyTurn } = useOnlineState();
-  // useEffect(() => {
-  //   console.log(
-  //     "isMyTurn: ",
-  //     isMyTurn,
-  //     "playerId: ",
-  //     playerId,
-  //     "online: ",
-  //     online
-  //   );
-  // }, [isMyTurn, playerId, online]);
   const { korkiState, firstSelected, eftaState, currentPlayer } =
     useGameState();
   const dispatch = useDispatch();
   const { prevKorkiState, checkEfta, hasTaken } = eftaState;
   const [latestKorki, setLatestKorki] = useState<Korki[]>([]);
 
-  useEffect(() => {
-    dispatch(setCurrentPlayer(currentPlayer));
-  }, [currentPlayer]);
   useEffect(() => {
     if (checkEfta && prevKorkiState.length === 32) {
       setLatestKorki(korkiState);
@@ -108,15 +93,12 @@ const Board = () => {
   };
 
   const checkEftaFun = (korki: Korki) => {
+    //check current player order
     if (korki.type === currentPlayer) {
       return;
     }
     //select the first korki to move
     if (firstSelected === null) {
-      //check current player order
-      if (korki.type === currentPlayer) {
-        return;
-      }
       dispatch(setTypeAndSelected({ selectID: korki.id, setSelected: 1 }));
       dispatch(setFirstSelected(korki));
     } else if (firstSelected.id === korki.id) {
@@ -204,6 +186,7 @@ const Board = () => {
     socket.on("moveMade", (data: any) => {
       const { korki, firstSelected, varEat, varNigus } = data;
       makeMoveFunc(korki, firstSelected, varEat, varNigus);
+      dispatch(setIsMyTurn(!isMyTurn));
     });
     return () => {
       socket.off("moveMade");
@@ -216,6 +199,9 @@ const Board = () => {
     }
     if (checkEfta) {
       checkEftaFun(korki);
+      return;
+    }
+    if (!isMyTurn && online) {
       return;
     }
     //select the first korki to move
@@ -242,11 +228,15 @@ const Board = () => {
 
       //check ongoing movement / second move after eating
       if (firstSelected.selected === 2) {
+        console.log("second");
+
         const { movable, eat, nigus } = checkEatable(
           firstSelected,
           korki,
           korkiState
         );
+        console.log("eat", eat);
+
         if (eat !== -1) {
           varMovable = movable;
           varEat = eat;

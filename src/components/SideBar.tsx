@@ -1,14 +1,18 @@
-import { Button, HStack, Text, VStack } from "@chakra-ui/react";
+import { Button, HStack, Text, VStack, Image } from "@chakra-ui/react";
 import { useState } from "react";
 import useGameState from "../hooks/useGameState";
 import { useDispatch } from "react-redux";
 import { setCheckEfta } from "../store/efta/eftaSlice";
+import cocka from "../assets/coca-cola-png-41660.png";
+import fanta from "../assets/Fanta.webp";
+import useOnlineState from "../hooks/useOnlineState";
 
 const SideBar = () => {
   const dispatch = useDispatch();
   const { eftaState, currentPlayer } = useGameState();
   const [message, setMessage] = useState("");
   const { prevKorkiState, doesEat, hasTaken, checkEfta } = eftaState;
+  const {} = useOnlineState();
   const handleEftaClick = () => {
     if (prevKorkiState.length !== 32) {
       setMessage("This is the first move, cannot take efta");
@@ -38,10 +42,22 @@ const SideBar = () => {
         >
           Efita
         </Button>
-        {message && <Text>{message}</Text>}
+        {message && (
+          <Text
+            className="whitespace-pre-wrap"
+            style={{
+              backgroundColor: "white",
+              padding: "10px",
+              fontSize: "20px",
+              borderRadius: "10px",
+            }}
+          >
+            {message}
+          </Text>
+        )}
       </VStack>
       <HStack justifyContent="center">
-        <Text>Current playing: {currentPlayer === 1 ? "fanta" : "cocka"}</Text>
+        <Image className="w-20" src={currentPlayer === 1 ? fanta : cocka} />
       </HStack>
     </>
   );

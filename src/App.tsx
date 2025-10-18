@@ -1,7 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import BoardGamePage from "./components/BoardGamePage";
-import CountWraper from "./count/CountWraper";
 import MultiplayerModeSelector from "./components/MultiplayerModeSelector";
 
 const App: React.FC = () => {
@@ -10,7 +9,6 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/board" element={<BoardGamePage />} />
         <Route path="/" element={<MultiplayerModeSelector />} />
-        <Route path="/count" element={<CountWraper />} />
       </Routes>
     </Router>
   );
